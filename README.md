@@ -1,4 +1,4 @@
-# OrangIdentifier - Android App
+# OrangIdentifier - Android App (V3)
 
 <img align="right" width="128" src="github_assets/app_icon.png" alt="OrangIdentifier App Icon">
 
