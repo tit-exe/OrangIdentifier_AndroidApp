@@ -78,8 +78,8 @@ flowchart LR
 
 This application requires specific ML models and a gallery JSON file. 
 
-All required `.tflite` models and `gallery.json` are hosted on a dedicated HuggingFace repository:
-> **[Link to your HuggingFace repo here]** *(e.g., huggingface.co/tit-exe/OrangIdentifier-Android-Assets)*
+All required `.tflite` models and `gallery.json` are hosted on the main HuggingFace repository:
+> **[tit0000/OrangIdentifier/tree/main](https://huggingface.co/tit0000/OrangIdentifier/tree/main)**
 
 ### Files to place in `app/src/main/assets/`
 Download the following files and place them in the `app/src/main/assets/` folder:
