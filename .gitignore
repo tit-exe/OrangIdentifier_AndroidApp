@@ -1,0 +1,58 @@
+# ============================================================
+# Android / Gradle generated files
+# ============================================================
+*.iml
+.gradle/
+/local.properties
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# ============================================================
+# APK / AAB / Release artifacts
+# ============================================================
+*.apk
+*.aab
+/app/release/
+**/output-metadata.json
+
+# ============================================================
+# IntelliJ / Android Studio - local user files
+# ============================================================
+/.idea/caches/
+/.idea/libraries/
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
+
+# ============================================================
+# Kotlin daemon / build caches
+# ============================================================
+.kotlin/
+
+# ============================================================
+# Claude AI (local config, should not be shared)
+# ============================================================
+.claude/
+
+# ============================================================
+# ML Models - large models excluded, small ones kept in repo
+# ============================================================
+# megadesc_T_arcface_backbone.tflite (112 MB) -> distribuer séparément (Git LFS / Drive)
+*.tflite
+!app/src/main/assets/yolo_v2_detector.tflite
+*.pt
+*.onnx
+*.pb
+
+# ============================================================
+# OS / misc
+# ============================================================
+.DS_Store
+Thumbs.db
+*.swp

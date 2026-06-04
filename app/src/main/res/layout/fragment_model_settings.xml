@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface_secondary">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- ── Ranger identity ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ranger"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/et_ranger_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_ranger_name"
+            android:inputType="textPersonName"
+            android:imeOptions="actionDone"
+            android:layout_marginBottom="24dp" />
+
+        <!-- ── Gallery ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp">
+
+            <Button
+                android:id="@+id/btn_view_gallery"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="View gallery"
+                android:backgroundTint="@color/green_600"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btn_import_patch"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Import patch" />
+
+        </LinearLayout>
+
+        <!-- ── Active models section ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_models_section"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tv_detector_version"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tv_classifier_version"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tv_threshold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <SeekBar
+            android:id="@+id/seekbar_threshold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="250"
+            android:progressTint="@color/green_600"
+            android:thumbTint="@color/green_600"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Recommended: 22%  —  Increase if too many false positives, decrease if individuals are missed."
+            android:textSize="11sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Recommended: ZIP bundle (all-in-one) -->
+        <Button
+            android:id="@+id/btn_import_bundle"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/btn_import_bundle"
+            android:backgroundTint="@color/green_600"
+            android:layout_marginBottom="24dp" />
+
+        <!-- ── Backup / restore ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gallery backup"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/tv_backup_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_restore_gallery"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/btn_restore_gallery"
+            android:layout_marginBottom="24dp" />
+
+        <!-- ── Advanced: individual file updates ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Advanced — individual files"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_import_detector"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/btn_import_detector"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_import_classifier"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/btn_import_classifier"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_import_labels"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/btn_import_labels"
+            android:layout_marginBottom="8dp" />
+
+        <!-- ── Danger zone ── -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/confidence_low"
+            android:alpha="0.3"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Danger zone"
+            android:textSize="13sp"
+            android:textColor="@color/confidence_low"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_factory_reset"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="⚠  Factory reset"
+            android:backgroundTint="@color/confidence_low"
+            android:layout_marginBottom="8dp" />
+
+    </LinearLayout>
+</ScrollView>

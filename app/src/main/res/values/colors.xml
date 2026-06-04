@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary brand — leaf green -->
+    <color name="green_50">#EAF3DE</color>
+    <color name="green_100">#C0DD97</color>
+    <color name="green_400">#639922</color>
+    <color name="green_600">#3B6D11</color>
+    <color name="green_800">#27500A</color>
+    <color name="green_900">#173404</color>
+
+    <!-- Surfaces -->
+    <color name="surface_primary">#FFFFFF</color>
+    <color name="surface_secondary">#F5F5F3</color>
+
+    <!-- Text -->
+    <color name="text_primary">#1A1A18</color>
+    <color name="text_secondary">#5F5E5A</color>
+    <color name="text_on_green">#FFFFFF</color>
+
+    <!-- Semantic confidence colors -->
+    <color name="confidence_high">#3B6D11</color>
+    <color name="confidence_medium">#BA7517</color>
+    <color name="confidence_low">#A32D2D</color>
+    <color name="unknown">#5F5E5A</color>
+
+    <!-- Bounding box overlay (one per face, up to 10) -->
+    <color name="box_0">#4CAF50</color>
+    <color name="box_1">#2196F3</color>
+    <color name="box_2">#FF9800</color>
+    <color name="box_3">#E91E63</color>
+    <color name="box_4">#9C27B0</color>
+    <color name="box_5">#00BCD4</color>
+    <color name="box_6">#FF5722</color>
+    <color name="box_7">#795548</color>
+    <color name="box_8">#607D8B</color>
+    <color name="box_9">#FFC107</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/surface_secondary">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/app_name"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="@color/green_800"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Face recognition for field use"
+        android:textSize="15sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="48dp" />
+
+    <Button
+        android:id="@+id/btn_camera"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/btn_take_photo"
+        android:textSize="17sp"
+        android:backgroundTint="@color/green_600"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btn_gallery"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/btn_pick_gallery"
+        android:textSize="17sp"
+        android:backgroundTint="@color/green_600"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:id="@+id/btn_add_individual"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/btn_add_individual"
+        android:textSize="17sp"
+        android:layout_marginBottom="32dp" />
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminateTint="@color/green_600"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textSize="15sp"
+        android:textColor="@color/text_secondary"
+        android:visibility="gone" />
+
+</LinearLayout>

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/nav_home">
+
+    <fragment
+        android:id="@+id/nav_home"
+        android:name="com.iphc.orangidentifier.ui.home.HomeFragment"
+        android:label="@string/title_home"
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_nav_home_to_nav_scan_result"
+            app:destination="@id/nav_scan_result" />
+        <action
+            android:id="@+id/action_nav_home_to_add_individual"
+            app:destination="@id/nav_add_individual" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_history"
+        android:name="com.iphc.orangidentifier.ui.history.HistoryFragment"
+        android:label="@string/title_history"
+        tools:layout="@layout/fragment_history">
+        <action
+            android:id="@+id/action_nav_history_to_nav_scan_result"
+            app:destination="@id/nav_scan_result" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.iphc.orangidentifier.ui.settings.ModelSettingsFragment"
+        android:label="@string/title_settings"
+        tools:layout="@layout/fragment_model_settings">
+        <action
+            android:id="@+id/action_settings_to_gallery"
+            app:destination="@id/nav_gallery" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_gallery"
+        android:name="com.iphc.orangidentifier.ui.gallery.GalleryFragment"
+        android:label="Gallery"
+        tools:layout="@layout/fragment_gallery">
+        <action
+            android:id="@+id/action_gallery_to_add_individual"
+            app:destination="@id/nav_add_individual" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_scan_result"
+        android:name="com.iphc.orangidentifier.ui.result.ScanResultFragment"
+        android:label="Result"
+        tools:layout="@layout/fragment_scan_result">
+        <argument
+            android:name="scanId"
+            app:argType="long" />
+        <action
+            android:id="@+id/action_scan_result_to_box_editor"
+            app:destination="@id/nav_box_editor" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_box_editor"
+        android:name="com.iphc.orangidentifier.ui.box_editor.BoxEditorFragment"
+        android:label="Edit boxes"
+        tools:layout="@layout/fragment_box_editor">
+        <argument
+            android:name="scanId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_add_individual"
+        android:name="com.iphc.orangidentifier.ui.add_individual.AddIndividualFragment"
+        android:label="@string/add_individual_title"
+        tools:layout="@layout/fragment_add_individual">
+        <action
+            android:id="@+id/action_add_individual_to_crop_review"
+            app:destination="@id/nav_crop_review" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_crop_review"
+        android:name="com.iphc.orangidentifier.ui.add_individual.CropReviewFragment"
+        android:label="@string/crop_review_title"
+        tools:layout="@layout/fragment_crop_review">
+        <action
+            android:id="@+id/action_crop_review_to_crop_editor"
+            app:destination="@id/nav_crop_editor" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_crop_editor"
+        android:name="com.iphc.orangidentifier.ui.add_individual.CropEditorFragment"
+        android:label="Edit crop"
+        tools:layout="@layout/fragment_crop_editor">
+        <argument
+            android:name="cropIndex"
+            app:argType="integer"
+            android:defaultValue="-1" />
+    </fragment>
+
+</navigation>

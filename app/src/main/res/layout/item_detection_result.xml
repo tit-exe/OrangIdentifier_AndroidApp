@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/surface_primary"
+    android:layout_marginBottom="8dp"
+    android:padding="14dp"
+    android:elevation="2dp">
+
+    <!-- "Face 1" label -->
+    <TextView
+        android:id="@+id/tv_face_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:textAllCaps="true"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Name + confidence label row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:id="@+id/tv_top_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary" />
+
+        <!-- Confidence badge: "Confident" / "Uncertain" / "" for unknown -->
+        <TextView
+            android:id="@+id/tv_confidence_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+    <!-- Confidence bar -->
+    <ProgressBar
+        android:id="@+id/pb_confidence"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:layout_marginBottom="8dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="@color/confidence_high" />
+
+    <!-- Secondary: raw score + top-3 (for technicians) -->
+    <TextView
+        android:id="@+id/tv_top3_details"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="@color/text_secondary"
+        android:lineSpacingExtra="4dp" />
+
+    <Button
+        android:id="@+id/btn_correct_id"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Correct ID"
+        android:textSize="12sp"
+        android:paddingStart="0dp" />
+
+</LinearLayout>
