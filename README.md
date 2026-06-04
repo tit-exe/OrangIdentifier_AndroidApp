@@ -15,6 +15,10 @@ This app runs the **V3 pipeline** under the hood: a YOLO v2 face detector paired
 
 Crucially, **adding a new individual is easy and instantaneous**: the ranger simply takes a few pictures of the new orangutan, the app extracts the facial embeddings, and the new identity is immediately saved to the local gallery without any retraining required.
 
+### V3 Model Strengths & Trade-offs
+The V3 MegaDescriptor model is specifically optimized for **open-set recognition**. This means it is incredibly robust at detecting **unknown individuals** (rejecting orangutans that are not in the gallery). 
+As a trade-off for this high rejection accuracy, the model can be slightly more sensitive to degraded conditions: recognition accuracy may drop if the image is too dark, highly compressed (JPEG artifacts), or noticeably blurry.
+
 ---
 
 ## Demo
@@ -67,7 +71,7 @@ flowchart LR
     B --> C[Crop Face 224x224]
     C --> D[MegaDescriptor-T TFLite\nSwin Transformer\n768-dim embedding]
     D --> E{Cosine similarity\nvs gallery.json}
-    E -->|sim >= threshold| F[Known individual\n(Confidence %)]
+    E -->|sim >= threshold| F["Known individual\n(Confidence %)"]
     E -->|sim < threshold| G[Unknown individual]
 
     style A fill:#1e1e2e,stroke:#585b70,color:#cdd6f4
@@ -81,18 +85,20 @@ flowchart LR
 
 ---
 
-## Models Included
+## Models & Gallery Download
 
-This application requires specific ML models to be present in the `app/src/main/assets/` directory.
+This application requires specific ML models and a gallery JSON file to be present in the `app/src/main/assets/` directory before building.
 
-- `yolo_v2_detector.tflite` (**Included** - 22MB): Used for fast face detection.
-- `megadesc_T_arcface_backbone.tflite` (**Not included** - 112MB): The heavy embedding model. **Must be downloaded separately.**
+All required `.tflite` models and the `gallery.json` are hosted on a dedicated HuggingFace repository:
+> **[Link to your new HuggingFace repo here]** *(e.g., huggingface.co/tit0000/OrangIdentifier-Android-Assets)*
 
-### Downloading the Backbone Model
-Due to GitHub file size limits, the 112MB `megadesc_T_arcface_backbone.tflite` model is excluded from the repository.
+### Files to place in `app/src/main/assets/`
+You must download the following 3 files and place them exactly in the `app/src/main/assets/` folder:
+1. `gallery.json` : The database containing the identity prototypes.
+2. `yolo_v2_detector.tflite` : The YOLO face detector model.
+3. `megadesc_T_arcface_backbone.tflite` : The MegaDescriptor-T embedding backbone.
 
-1. Download the model from the HuggingFace repo: [tit0000/OrangIdentifier](https://huggingface.co/tit0000/OrangIdentifier) (or from the latest GitHub Release).
-2. Place it exactly at: `app/src/main/assets/megadesc_T_arcface_backbone.tflite` before building the app.
+*Note: The `yolo_v2_detector.tflite` is already included in this repository because it is small enough, but the backbone model (112MB) exceeds GitHub's file size limits.*
 
 ---
 
@@ -102,17 +108,8 @@ Due to GitHub file size limits, the 112MB `megadesc_T_arcface_backbone.tflite` m
    ```bash
    git clone https://github.com/tit0000/OrangIdentifier-Android.git
    ```
-2. Download the `megadesc_T_arcface_backbone.tflite` model and place it in `app/src/main/assets/`.
-3. Open the project in **Android Studio** (Koala or newer recommended).
-4. Sync the Gradle files.
-5. Hit **Run** to build and install the app on your physical device or emulator.
-
----
-
-## How to use custom galleries
-
-The app ships with a sample `gallery.json` in the `assets/` folder. This JSON file acts as the "database" of known individuals, storing their L2-normalized embedding vectors (prototypes).
-
-To use your own gallery:
-1. Generate a gallery using the [Python pipeline](https://github.com/tit0000/OrangIdentifier).
-2. Replace `app/src/main/assets/gallery.json` before building, OR load the JSON file dynamically from the app's settings menu at runtime.
+2. Download `megadesc_T_arcface_backbone.tflite` (and your custom `gallery.json`) from the HuggingFace repo.
+3. Place them in the `app/src/main/assets/` directory.
+4. Open the project in **Android Studio** (Koala or newer recommended).
+5. Sync the Gradle files.
+6. Hit **Run** to build and install the app on your physical device or emulator.
