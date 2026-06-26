@@ -20,7 +20,9 @@ import com.iphc.orangidentifier.R
 import com.iphc.orangidentifier.ui.base.BaseFragment
 import com.iphc.orangidentifier.utils.toast
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Displays all detected face crops in a 3-column grid.
@@ -186,15 +188,18 @@ class CropReviewFragment : BaseFragment(R.layout.fragment_crop_review) {
     }
 
     private fun sharePatch(individualName: String) {
-        val patchFile = viewModel.exportPatch(individualName)
-        if (patchFile == null) {
-            toast("Could not create patch file")
+        viewLifecycleOwner.lifecycleScope.launch {
+            val patchFile = withContext(Dispatchers.IO) { viewModel.exportPatch(individualName) }
+            if (patchFile == null) {
+                toast("Could not create patch file")
+            } else {
+                startActivity(Intent.createChooser(
+                    viewModel.createShareIntent(patchFile),
+                    "Share gallery patch"
+                ))
+            }
             navigateDone()
-            return
         }
-        val intent = viewModel.createShareIntent(patchFile)
-        startActivity(Intent.createChooser(intent, "Share gallery patch"))
-        navigateDone()
     }
 
     private fun navigateDone() {

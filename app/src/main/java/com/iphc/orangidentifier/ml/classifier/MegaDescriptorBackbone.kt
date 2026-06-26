@@ -51,6 +51,25 @@ class MegaDescriptorBackbone @Inject constructor(
         // MegaDescriptor-T-224 normalization — V3
         private val MEGADESC_MEAN = floatArrayOf(0.5f, 0.5f, 0.5f)
         private val MEGADESC_STD  = floatArrayOf(0.5f, 0.5f, 0.5f)
+
+        /**
+         * Minimum margin required between the #1 and #2 scores for a positive ID.
+         *
+         * When scores are compressed (e.g. Berunay 84.5%, Farida 84.3%, Hanau 83.8%)
+         * the model has no real conviction — it's saying "all known orangutans look
+         * roughly equally like this". A margin below this threshold means the query
+         * is closer to a generic "orangutan shape" than to any specific individual,
+         * so we reject it as Unknown regardless of the absolute score.
+         *
+         * Typical values observed:
+         *   - Internet photo of unknown orang → margin ~0.002–0.005  → rejected ✓
+         *   - Good field photo of known individual → margin ~0.10–0.35  → accepted ✓
+         *   - Borderline field photo → margin ~0.05–0.10  → marginal zone
+         *
+         * Set conservatively at 0.08 to avoid false positives on BOS individuals
+         * that have few training crops and tend to produce compressed similarities.
+         */
+        private const val MARGIN_THRESHOLD = 0.08f
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -65,12 +84,14 @@ class MegaDescriptorBackbone @Inject constructor(
 
         val ranked = gallery.prototypes
             .map { proto ->
-                // Dual-prototype: use whichever of anchor or field gives the highest similarity.
-                // Field additions can only improve recognition — never reduce anchor performance.
-                val anchorSim = EmbeddingUtils.dotProduct(embedding, proto.anchorEmbedding)
-                val fieldSim  = proto.fieldEmbedding?.let { EmbeddingUtils.dotProduct(embedding, it) }
+                // V6 scoring: max cosine similarity over all training exemplars.
+                // For V3/user-added individuals proto.exemplars = [anchor] so this
+                // degrades cleanly to a single dot product — no special case needed.
+                val exemplarSim = proto.exemplars.maxOf { EmbeddingUtils.dotProduct(embedding, it) }
+                // Field embedding (user field photos) acts as extra exemplar — can only improve.
+                val fieldSim    = proto.fieldEmbedding?.let { EmbeddingUtils.dotProduct(embedding, it) }
                     ?: Float.NEGATIVE_INFINITY
-                Pair(proto, maxOf(anchorSim, fieldSim))
+                Pair(proto, maxOf(exemplarSim, fieldSim))
             }
             .sortedByDescending { it.second }
 
@@ -83,14 +104,25 @@ class MegaDescriptorBackbone @Inject constructor(
             )
         }
 
-        val bestScore = ranked.firstOrNull()?.second ?: 0f
-        val isUnknown = bestScore < modelManager.getUnknownThreshold()
+        val bestScore   = ranked.getOrNull(0)?.second ?: 0f
+        val secondScore = ranked.getOrNull(1)?.second ?: 0f
+        val margin      = bestScore - secondScore
 
-        // Log.d is a no-op in release builds when R8/ProGuard stripping is enabled
+        // Two independent rejection conditions:
+        //   1. Absolute threshold: score too low → clearly not in gallery
+        //   2. Margin threshold: top-2 scores too close → model is uncertain,
+        //      likely a generic "orangutan" embedding, not a specific individual
+        val isUnknown = bestScore < modelManager.getUnknownThreshold()
+                || margin < MARGIN_THRESHOLD
+
         if (isUnknown) {
-            Log.d(TAG, "Unknown — best=${"%.3f".format(bestScore)} < threshold=${gallery.unknownThreshold}")
+            Log.d(TAG, "Unknown — best=${"%.3f".format(bestScore)} " +
+                    "margin=${"%.3f".format(margin)} " +
+                    "threshold=${gallery.unknownThreshold} " +
+                    "marginThreshold=$MARGIN_THRESHOLD")
         } else {
-            Log.d(TAG, "Identified: ${ranked.firstOrNull()?.first?.name} (score=${"%.3f".format(bestScore)})")
+            Log.d(TAG, "Identified: ${ranked.firstOrNull()?.first?.name} " +
+                    "(score=${"%.3f".format(bestScore)} margin=${"%.3f".format(margin)})")
         }
 
         return ClassificationResult(
@@ -166,5 +198,4 @@ class MegaDescriptorBackbone @Inject constructor(
         buffer.rewind()
         return buffer
     }
-
 }

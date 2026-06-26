@@ -27,10 +27,11 @@ class GalleryFragment : BaseFragment(R.layout.fragment_gallery) {
 
     @Inject lateinit var galleryManager: GalleryManager
 
-    private lateinit var rvIndividuals: RecyclerView
-    private lateinit var tvEmpty:       TextView
-    private lateinit var tvCount:       TextView
-    private lateinit var btnUndo:       Button
+    private lateinit var rvIndividuals:  RecyclerView
+    private lateinit var tvEmpty:        TextView
+    private lateinit var tvCount:        TextView
+    private lateinit var btnUndo:        Button
+    private lateinit var btnExport:      Button
 
     private val adapter = GalleryAdapter(
         onDelete    = { item -> showDeleteDialog(item) },
@@ -49,12 +50,21 @@ class GalleryFragment : BaseFragment(R.layout.fragment_gallery) {
         tvEmpty       = view.findViewById(R.id.tv_empty)
         tvCount       = view.findViewById(R.id.tv_count)
         btnUndo       = view.findViewById(R.id.btn_undo_last_change)
+        btnExport     = view.findViewById(R.id.btn_export_gallery)
 
         rvIndividuals.layoutManager = LinearLayoutManager(requireContext())
         rvIndividuals.adapter = adapter
 
-        btnUndo.setOnClickListener { showUndoDialog() }
+        btnUndo.setOnClickListener   { showUndoDialog() }
+        btnExport.setOnClickListener { exportGallery() }
 
+        loadGallery()
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    override fun onResume() {
+        super.onResume()
         loadGallery()
     }
 
@@ -66,7 +76,8 @@ class GalleryFragment : BaseFragment(R.layout.fragment_gallery) {
             val hasBackup = withContext(Dispatchers.IO) { galleryManager.hasBackups() }
 
             tvCount.text = "${summaries.size} individual${if (summaries.size != 1) "s" else ""}"
-            btnUndo.visibility = if (hasBackup) View.VISIBLE else View.GONE
+            btnUndo.visibility   = if (hasBackup)         View.VISIBLE else View.GONE
+            btnExport.visibility = if (summaries.isNotEmpty()) View.VISIBLE else View.GONE
 
             if (summaries.isEmpty()) {
                 tvEmpty.visibility       = View.VISIBLE
@@ -131,7 +142,23 @@ class GalleryFragment : BaseFragment(R.layout.fragment_gallery) {
         )
     }
 
-    // ── Share patch ───────────────────────────────────────────────────────────
+    // ── Export full gallery ───────────────────────────────────────────────────
+
+    private fun exportGallery() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val file = withContext(Dispatchers.IO) { galleryManager.exportFullGallery() }
+            if (file == null) {
+                Snackbar.make(requireView(), "Could not export gallery", Snackbar.LENGTH_SHORT).show()
+                return@launch
+            }
+            startActivity(Intent.createChooser(
+                galleryManager.createShareIntent(file),
+                "Export gallery.json"
+            ))
+        }
+    }
+
+    // ── Share patch (single individual) ──────────────────────────────────────
 
     private fun shareIndividual(summary: GalleryManager.IndividualSummary) {
         viewLifecycleOwner.lifecycleScope.launch {

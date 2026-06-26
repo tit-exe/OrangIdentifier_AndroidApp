@@ -21,24 +21,31 @@ import java.util.zip.ZipInputStream
 // ── Public data classes ───────────────────────────────────────────────────────
 
 /**
- * Per-individual prototype — dual-embedding design.
+ * Per-individual prototype — V6 multi-exemplar design.
  *
- * [anchorEmbedding]  Original training prototype. NEVER modified by user additions.
- *                    Always L2-normalised. High-quality-image recognition depends on this.
+ * [anchorEmbedding]  Centroid of all training embeddings. Kept for backward-compat
+ *                    (GalleryManager write-back reads it from JSON's "embedding" field).
+ *                    Always L2-normalised.
  *
- * [fieldEmbedding]   Built from user-added field photos. Null when no field photos have
- *                    been added yet. Updated via weighted average; capped at [MAX_FIELD_CROPS].
- *                    L2-normalised when present.
+ * [exemplars]        List of L2-normalised exemplar vectors used for scoring.
+ *                    V6 gallery: 25 training exemplars chosen by centroid proximity.
+ *                    V3 / user-added: single-element list containing [anchorEmbedding].
+ *                    NEVER empty — parsing always falls back to [anchorEmbedding].
  *
- * Classification uses max(dot(query, anchor), dot(query, field)) so field additions can
- * only improve recognition — they can never reduce performance on the anchor domain.
+ * [fieldEmbedding]   Optional prototype built from user-added field photos.
+ *                    Acts as a supplementary exemplar during scoring:
+ *                    score = max(max_over_exemplars, dot(query, fieldEmbedding)).
+ *
+ * Scoring: score(individual) = max( dot(query, ex) for ex in exemplars )
+ *          then:             = max(above, dot(query, fieldEmbedding))  if field present
  */
 data class IndividualPrototype(
     val name: String,
     val classIndex: Int,
-    val anchorEmbedding: FloatArray,       // L2-normalised anchor (immutable via API)
-    val fieldEmbedding: FloatArray? = null, // L2-normalised field prototype (null = no field photos)
-    val fieldCrops: Int = 0                // number of user-added field crops (for display)
+    val anchorEmbedding: FloatArray,        // centroid — kept for GalleryManager compat
+    val exemplars: List<FloatArray>,         // V6: 25 exemplars; V3/user: [anchor]
+    val fieldEmbedding: FloatArray? = null,  // user field photos (null = none added)
+    val fieldCrops: Int = 0
 ) {
     override fun equals(other: Any?) = other is IndividualPrototype && name == other.name
     override fun hashCode() = name.hashCode()
@@ -84,7 +91,11 @@ class ModelManager(
     companion object {
         private const val TAG = "ModelManager"
         const val DETECTOR_FILENAME   = "yolo_v2_detector.tflite"
-        const val BACKBONE_FILENAME   = "megadesc_T_arcface_backbone.tflite"
+        // Default write-target filename for the backbone.
+        // The app auto-discovers any *.tflite whose name contains "backbone", "megadesc",
+        // "arcface", "classifier", or "resnet" (but not "yolo"/"detector"), so renaming
+        // this file for a future version (e.g. megadesc_v7_backbone.tflite) will still work.
+        const val BACKBONE_FILENAME   = "megadesc_v6_backbone.tflite"
         const val GALLERY_FILENAME    = "gallery.json"
         const val EMBEDDINGS_FILENAME = "embeddings.json"   // V2 legacy, still accepted
 
@@ -118,8 +129,9 @@ class ModelManager(
     @Synchronized
     fun getClassifierInterpreter(): Interpreter {
         if (classifierInterpreter == null) {
-            classifierInterpreter = TfliteInterpreterFactory.build(loadModel(BACKBONE_FILENAME))
-            Log.i(TAG, "Loaded backbone: ${resolvedModelPath(BACKBONE_FILENAME)}")
+            val name = resolveBackboneFilename()
+            classifierInterpreter = TfliteInterpreterFactory.build(loadModel(name))
+            Log.i(TAG, "Loaded backbone: ${resolvedModelPath(name)} ($name)")
         }
         return classifierInterpreter!!
     }
@@ -142,8 +154,13 @@ class ModelManager(
     }
 
     fun activeClassifierVersion(): String {
-        val f = File(FileUtils.getModelsDir(context), BACKBONE_FILENAME)
-        return if (f.exists()) "user:$BACKBONE_FILENAME" else "bundled:$BACKBONE_FILENAME"
+        return try {
+            val name = resolveBackboneFilename()
+            val inUserDir = File(FileUtils.getModelsDir(context), name).exists()
+            if (inUserDir) "user:$name" else "bundled:$name"
+        } catch (_: Exception) {
+            "bundled:(not found)"
+        }
     }
 
     fun activeGalleryVersion(): String {
@@ -418,17 +435,16 @@ class ModelManager(
     }
 
     private fun loadFromFile(file: File): MappedByteBuffer {
-        // Do NOT close the FileInputStream — the MappedByteBuffer is backed by it.
-        val fis = FileInputStream(file)
-        val channel = fis.channel
-        return channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size())
+        return FileInputStream(file).use { fis ->
+            fis.channel.map(FileChannel.MapMode.READ_ONLY, 0, fis.channel.size())
+        }
     }
 
     private fun loadFromAssets(filename: String): MappedByteBuffer {
-        val afd = context.assets.openFd(filename)
-        val fis = FileInputStream(afd.fileDescriptor)
-        val channel = fis.channel
-        return channel.map(FileChannel.MapMode.READ_ONLY, afd.startOffset, afd.declaredLength)
+        return context.assets.openFd(filename).use { afd ->
+            FileInputStream(afd.fileDescriptor).channel
+                .map(FileChannel.MapMode.READ_ONLY, afd.startOffset, afd.declaredLength)
+        }
     }
 
     private fun loadEmbeddings(): EmbeddingsData {
@@ -469,20 +485,81 @@ class ModelManager(
         val prototypes = raw.individuals?.entries?.mapNotNull { (name, ind) ->
             val rawAnchor = ind.embedding ?: return@mapNotNull null
             val anchor = EmbeddingUtils.l2Normalize(FloatArray(rawAnchor.size) { rawAnchor[it] })
+
+            // V6: parse per-individual exemplar list; V3/user-added: fall back to [anchor]
+            // exemplars is NEVER empty — the fallback guarantees at least one element.
+            val exemplars: List<FloatArray> = if (!ind.exemplars.isNullOrEmpty()) {
+                ind.exemplars.map { ex ->
+                    EmbeddingUtils.l2Normalize(FloatArray(ex.size) { ex[it] })
+                }
+            } else {
+                listOf(anchor)
+            }
+
             val field = ind.fieldEmbedding?.takeIf { it.isNotEmpty() }
                 ?.let { floats -> EmbeddingUtils.l2Normalize(FloatArray(floats.size) { floats[it] }) }
             IndividualPrototype(
-                name           = name,
-                classIndex     = ind.classIndex ?: 0,
+                name            = name,
+                classIndex      = ind.classIndex ?: 0,
                 anchorEmbedding = anchor,
-                fieldEmbedding = field,
-                fieldCrops     = ind.fieldCrops ?: 0
+                exemplars       = exemplars,
+                fieldEmbedding  = field,
+                fieldCrops      = ind.fieldCrops ?: 0
             )
         } ?: emptyList()
 
         Log.i(TAG, "Loaded ${prototypes.size} prototypes | " +
             "dim=$embeddingDim | norm=$normalization | threshold=$threshold")
         return EmbeddingsData(threshold, embeddingDim, normalization, prototypes)
+    }
+
+    /**
+     * Discovers the backbone TFLite to load.
+     *
+     * Priority:
+     *   1. Any *.tflite in the user models dir that matches [isBackboneFile]
+     *      (exact [BACKBONE_FILENAME] preferred if multiple candidates exist)
+     *   2. Any *.tflite in assets that matches [isBackboneFile]
+     *      (same preference logic)
+     *
+     * This makes the file name flexible: renaming to megadesc_v7_backbone.tflite,
+     * megadesc_T_arcface_backbone.tflite, or any "backbone"/"megadesc"/"arcface"/
+     * "classifier"/"resnet" name works without changing app code.
+     */
+    private fun resolveBackboneFilename(): String {
+        val modelsDir = FileUtils.getModelsDir(context)
+
+        // User-installed: prefer exact BACKBONE_FILENAME, then any backbone candidate
+        val userCandidate = modelsDir.listFiles()
+            ?.filter { it.isFile && isBackboneFile(it.name) }
+            ?.sortedByDescending { it.name == BACKBONE_FILENAME }
+            ?.firstOrNull()
+        if (userCandidate != null) {
+            Log.d(TAG, "Backbone resolved (user): ${userCandidate.name}")
+            return userCandidate.name
+        }
+
+        // Bundled asset: same preference logic
+        val assetNames = try { context.assets.list("") ?: emptyArray() } catch (_: Exception) { emptyArray() }
+        return assetNames
+            .filter { isBackboneFile(it) }
+            .sortedByDescending { it == BACKBONE_FILENAME }
+            .firstOrNull()
+            ?: throw IllegalStateException(
+                "No backbone model found in assets. " +
+                "Place a *.tflite with 'backbone', 'megadesc', 'arcface', or 'classifier' in the name " +
+                "into assets/, or import one via Settings → Import Bundle."
+            )
+    }
+
+    /** True if [name] looks like a backbone model (not a YOLO/detector). */
+    private fun isBackboneFile(name: String): Boolean {
+        val lower = name.lowercase()
+        return lower.endsWith(".tflite") &&
+            (lower.contains("backbone")   || lower.contains("megadesc") ||
+             lower.contains("arcface")    || lower.contains("classifier") ||
+             lower.contains("resnet")) &&
+            !lower.contains("yolo") && !lower.contains("detector")
     }
 
     private fun isTfliteValid(bytes: ByteArray): Boolean {
@@ -505,8 +582,9 @@ class ModelManager(
 
     private data class IndividualJsonRaw(
         @SerializedName("class_index")     val classIndex: Int?,
-        val embedding: List<Float>?,                              // anchor — never overwritten by additions
-        @SerializedName("field_embedding") val fieldEmbedding: List<Float>? = null,  // field prototype
-        @SerializedName("field_crops")     val fieldCrops: Int? = null               // user crop count
+        val embedding: List<Float>?,                               // centroid / anchor
+        val exemplars: List<List<Float>>? = null,                  // V6: list of exemplar vectors
+        @SerializedName("field_embedding") val fieldEmbedding: List<Float>? = null,
+        @SerializedName("field_crops")     val fieldCrops: Int? = null
     )
 }

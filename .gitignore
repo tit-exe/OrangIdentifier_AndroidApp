@@ -41,10 +41,13 @@
 .claude/
 
 # ============================================================
-# ML Models - large models excluded, small ones kept in repo
+# ML Models
 # ============================================================
-# megadesc_T_arcface_backbone.tflite (112 MB) -> distribuer séparément (Git LFS / Drive)
+# All .tflite excluded by default — only the two bundled models are kept.
+# megadesc_v6_backbone.tflite (112 MB) is tracked via Git LFS (see .gitattributes).
+# yolo_v2_detector.tflite (22 MB) is tracked normally.
 *.tflite
+!app/src/main/assets/megadesc_v6_backbone.tflite
 !app/src/main/assets/yolo_v2_detector.tflite
 *.pt
 *.onnx

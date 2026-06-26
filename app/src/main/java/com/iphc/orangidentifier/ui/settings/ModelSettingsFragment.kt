@@ -39,6 +39,13 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class ModelSettingsFragment : BaseFragment(R.layout.fragment_model_settings) {
 
+    companion object {
+        // Slider covers [5%, 85%] with progress [0, 800] — accommodates both V3 (~22%)
+        // and V6 (~54%) thresholds without clamping the gallery-calibrated value.
+        private const val THRESHOLD_MIN = 0.05f
+        private const val THRESHOLD_MAX = 0.85f
+    }
+
     @Inject lateinit var modelManager:    ModelManager
     @Inject lateinit var appPreferences:  AppPreferences
     @Inject lateinit var galleryManager:  GalleryManager
@@ -126,17 +133,17 @@ class ModelSettingsFragment : BaseFragment(R.layout.fragment_model_settings) {
         seekbarThreshold    = view.findViewById(R.id.seekbar_threshold)
         tvBackupInfo        = view.findViewById(R.id.tv_backup_info)
 
-        // Threshold slider: progress 0–250 → 10%–35% (step 0.1%)
-        // Clamp + write-back so the stored value always matches what the slider shows
-        val currentThreshold = appPreferences.unknownThreshold.coerceIn(0.10f, 0.35f)
-        if (appPreferences.unknownThreshold != currentThreshold) {
-            appPreferences.unknownThreshold = currentThreshold
-        }
-        seekbarThreshold.progress = ((currentThreshold - 0.10f) * 1000f).toInt()
+        // Threshold slider: progress 0–800 → 5%–85% (step 0.1%)
+        // Range covers both V3 (~22%) and V6 (~54%) thresholds without clamping.
+        // IMPORTANT: we read the threshold from prefs as-is and NEVER write back on init —
+        // the gallery load already sets the calibrated value; clamping here would destroy it.
+        seekbarThreshold.max = 800
+        val threshold = appPreferences.unknownThreshold
+        seekbarThreshold.progress = ((threshold.coerceIn(THRESHOLD_MIN, THRESHOLD_MAX) - THRESHOLD_MIN) * 1000f).toInt()
         seekbarThreshold.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
-                val newThreshold = 0.10f + progress / 1000f
+                val newThreshold = THRESHOLD_MIN + progress / 1000f
                 appPreferences.unknownThreshold = newThreshold
                 tvThreshold.text = thresholdLabel(newThreshold)
             }
@@ -184,6 +191,14 @@ class ModelSettingsFragment : BaseFragment(R.layout.fragment_model_settings) {
         }
 
         refreshDisplay()
+
+        // Eagerly sync the gallery-calibrated threshold into prefs so the slider shows
+        // the right value even before the first scan (prefs default is 0.22f; gallery = 0.54f).
+        viewLifecycleOwner.lifecycleScope.launch {
+            try { withContext(Dispatchers.IO) { modelManager.getEmbeddings() } }
+            catch (_: Exception) {}
+            refreshDisplay()
+        }
     }
 
     // ── UI helpers ────────────────────────────────────────────────────────────
@@ -293,15 +308,15 @@ class ModelSettingsFragment : BaseFragment(R.layout.fragment_model_settings) {
     }
 
     private fun thresholdLabel(t: Float) =
-        "Recognition threshold: %.0f%%  [10%% – 35%%]".format(t * 100)
+        "Recognition threshold: ${"%.1f".format(t * 100)}%"
 
     private fun refreshDisplay() {
         tvDetectorVersion.text   = "Detector:  ${modelManager.activeDetectorVersion()}"
         tvClassifierVersion.text = "Backbone:  ${modelManager.activeClassifierVersion()}\n" +
                                    "Gallery:   ${modelManager.activeGalleryVersion()}"
-        val t = modelManager.getUnknownThreshold().coerceIn(0.10f, 0.35f)
+        val t = appPreferences.unknownThreshold
         tvThreshold.text = thresholdLabel(t)
-        seekbarThreshold.progress = ((t - 0.10f) * 1000f).toInt()
+        seekbarThreshold.progress = ((t.coerceIn(THRESHOLD_MIN, THRESHOLD_MAX) - THRESHOLD_MIN) * 1000f).toInt()
 
         val backups = modelManager.listGalleryBackups()
         tvBackupInfo.text = if (backups.isEmpty()) {

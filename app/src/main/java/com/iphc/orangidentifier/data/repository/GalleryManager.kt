@@ -101,6 +101,13 @@ class GalleryManager @Inject constructor(
             add("embedding", JsonArray().also { arr ->
                 prototype.forEach { v -> arr.add(v) }
             })
+            // V6 compatibility: wrap the centroid as a single exemplar so max-over-exemplars
+            // scoring works for user-added individuals. Using the centroid (average of N crops)
+            // rather than individual crop embeddings avoids generic/noisy single-crop vectors.
+            add("exemplars", JsonArray().also { outer ->
+                outer.add(JsonArray().also { inner -> prototype.forEach { v -> inner.add(v) } })
+            })
+            addProperty("num_exemplars", 1)
         }
         individuals.add(name, entry)
         galleryJson.add("individuals", individuals)
@@ -120,7 +127,12 @@ class GalleryManager @Inject constructor(
     fun findSimilarIndividuals(prototype: FloatArray, threshold: Float = 0.82f): List<Pair<String, Float>> {
         return try {
             modelManager.getEmbeddings().prototypes
-                .map { it.name to EmbeddingUtils.dotProduct(prototype, it.anchorEmbedding) }
+                .map { proto ->
+                    // V6: max-over-exemplars mirrors the exact score inference would produce.
+                    // V3 fallback: exemplars = [anchor], so maxOf degrades to a single dot product.
+                    val maxSim = proto.exemplars.maxOf { EmbeddingUtils.dotProduct(prototype, it) }
+                    proto.name to maxSim
+                }
                 .filter { it.second >= threshold }
                 .sortedByDescending { it.second }
         } catch (e: Exception) {
@@ -161,22 +173,34 @@ class GalleryManager @Inject constructor(
         val anchorArr = entry.getAsJsonArray("embedding") ?: return AddFieldResult(0, 0, 0)
         val anchor    = FloatArray(anchorArr.size()) { anchorArr[it].asFloat }
 
+        // V6: compare field crops against exemplars (max-over-exemplars), not just centroid.
+        // V3 fallback: exemplars array absent → selfVectors = [anchor] (same as before).
+        val exemplarsArr = entry.getAsJsonArray("exemplars")
+        val selfVectors: List<FloatArray> = if (exemplarsArr != null && exemplarsArr.size() > 0) {
+            (0 until exemplarsArr.size()).map { i ->
+                val ex = exemplarsArr[i].asJsonArray
+                FloatArray(ex.size()) { j -> ex[j].asFloat }
+            }
+        } else {
+            listOf(anchor)
+        }
+
         // ── Quality gate ──────────────────────────────────────────────────────
         // Two modes depending on batch size:
         //
         // SINGLE photo (< BATCH_MIN_SIZE): strict per-photo check.
-        //   A single screenshot or compressed image has near-zero similarity with the anchor
-        //   and would corrupt the prototype. Gate = threshold × SINGLE_GATE_RATIO.
+        //   Compares each embedding against the BEST matching training exemplar.
+        //   Gate = threshold × SINGLE_GATE_RATIO.
         //
         // BATCH (≥ BATCH_MIN_SIZE): check the AVERAGE of the whole batch.
-        //   Averaging many noisy-but-correct photos cancels random noise and produces
-        //   a useful prototype, even if each individual photo would fail the strict gate.
-        //   Gate = threshold × BATCH_GATE_RATIO (more lenient because averaging helps).
+        //   Averaging cancels noise — the centroid of good photos passes even if
+        //   individual crops are slightly below the single gate.
+        //   Gate = threshold × BATCH_GATE_RATIO (more lenient).
         var rejected = 0
         val validEmbs: List<FloatArray>
         if (newEmbeddings.size >= BATCH_MIN_SIZE) {
             val batchAvg  = EmbeddingUtils.averageEmbeddings(newEmbeddings)
-            val batchSim  = EmbeddingUtils.dotProduct(batchAvg, anchor)
+            val batchSim  = selfVectors.maxOf { EmbeddingUtils.dotProduct(batchAvg, it) }
             val batchGate = prefs.unknownThreshold * BATCH_GATE_RATIO
             if (batchSim >= batchGate) {
                 validEmbs = newEmbeddings       // whole batch passes as a group
@@ -188,7 +212,7 @@ class GalleryManager @Inject constructor(
         } else {
             val singleGate = prefs.unknownThreshold * SINGLE_GATE_RATIO
             validEmbs = newEmbeddings.filter { emb ->
-                val sim = EmbeddingUtils.dotProduct(emb, anchor)
+                val sim = selfVectors.maxOf { EmbeddingUtils.dotProduct(emb, it) }
                 if (sim < singleGate) { rejected++; false } else true
             }
         }
@@ -235,27 +259,38 @@ class GalleryManager @Inject constructor(
         // The merged prototype must pass two checks before being written to disk.
         // Both use the same threshold as live classification for consistency.
         //
-        // Check 1 — self-similarity: the merged prototype must look enough like [name].
-        //   If selfSim < threshold, the prototype is in the "generic orangutan" zone
-        //   and would behave as an Unknown — useless, and dangerous if combined with max().
+        // Check 1 — self-similarity: the merged prototype must resemble [name].
+        //   Uses max-over-exemplars (same metric as inference) — if even the closest
+        //   training exemplar doesn't recognise this field prototype, it's too generic.
         //
         // Check 2 — no false positives: the merged prototype must not exceed threshold
-        //   for any OTHER individual's anchor. If it does, that individual would be
-        //   misclassified as [name] in live inference.
-        val selfSim = EmbeddingUtils.dotProduct(normed, anchor)
+        //   against ANY exemplar of any other individual. Uses all exemplars, not just
+        //   centroids, to mirror exactly what inference would see.
+        val selfSim = selfVectors.maxOf { EmbeddingUtils.dotProduct(normed, it) }
         if (selfSim < prefs.unknownThreshold) {
             Log.w(TAG, "addFieldCrops '$name': merged prototype selfSim=${"%.3f".format(selfSim)} " +
                 "< threshold=${prefs.unknownThreshold} — too generic, discarded")
             return AddFieldResult(0, toAdd, 0)
         }
-        val otherAnchors = individuals.entrySet()
+        // Collect ALL exemplar vectors from other individuals (V6: up to 25 each; V3: [anchor])
+        val otherExemplars: List<FloatArray> = individuals.entrySet()
             .filter { (k, _) -> k != name }
-            .mapNotNull { (_, v) ->
-                v.asJsonObject.getAsJsonArray("embedding")
-                    ?.let { arr -> FloatArray(arr.size()) { i -> arr[i].asFloat } }
+            .flatMap { (_, v) ->
+                val obj   = v.asJsonObject
+                val exArr = obj.getAsJsonArray("exemplars")
+                if (exArr != null && exArr.size() > 0) {
+                    (0 until exArr.size()).map { i ->
+                        val ex = exArr[i].asJsonArray
+                        FloatArray(ex.size()) { j -> ex[j].asFloat }
+                    }
+                } else {
+                    obj.getAsJsonArray("embedding")
+                        ?.let { arr -> listOf(FloatArray(arr.size()) { i -> arr[i].asFloat }) }
+                        ?: emptyList()
+                }
             }
-        if (otherAnchors.isNotEmpty()) {
-            val maxOtherSim = otherAnchors.maxOf { EmbeddingUtils.dotProduct(normed, it) }
+        if (otherExemplars.isNotEmpty()) {
+            val maxOtherSim = otherExemplars.maxOf { EmbeddingUtils.dotProduct(normed, it) }
             if (maxOtherSim >= prefs.unknownThreshold) {
                 Log.w(TAG, "addFieldCrops '$name': merged prototype would match another individual " +
                     "(max_other=${"%.3f".format(maxOtherSim)} ≥ threshold) — discarded to prevent false positives")
@@ -313,6 +348,8 @@ class GalleryManager @Inject constructor(
                 add("embedding",    entry.get("embedding"))
                 add("num_crops",    entry.get("num_training_crops") ?: JsonPrimitive(0))
                 add("added_at",     entry.get("added_at") ?: JsonPrimitive(isoNow()))
+                // V6: include exemplars so receiver can do max-over-exemplars without fallback
+                entry.getAsJsonArray("exemplars")?.let { add("exemplars", it) }
             }
             addedIndividuals.add(name, patchEntry)
         }
@@ -337,6 +374,27 @@ class GalleryManager @Inject constructor(
 
         Log.i(TAG, "Patch exported: ${file.name} (${addedIndividuals.size()} individuals)")
         return file
+    }
+
+    /**
+     * Exports the complete active gallery.json to the exports directory and returns the file.
+     * The receiver imports it via Settings → "Import Labels" to fully replace their gallery.
+     * Unlike exportPatch(), this includes ALL individuals (bundled + user-added) and the full
+     * exemplar sets, making it suitable for migrating to a new device or sharing with a colleague.
+     */
+    fun exportFullGallery(): File? {
+        return try {
+            val galleryJson = readCurrentGalleryJson()
+            val exportsDir = File(context.filesDir, "exports").also { it.mkdirs() }
+            val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val file = File(exportsDir, "gallery_export_$stamp.json")
+            file.writeText(galleryJson.toString())
+            Log.i(TAG, "Full gallery exported: ${file.name} (${file.length()/1024} KB)")
+            file
+        } catch (e: Exception) {
+            Log.e(TAG, "exportFullGallery failed", e)
+            null
+        }
     }
 
     /**
@@ -473,6 +531,16 @@ class GalleryManager @Inject constructor(
                 currentIndividuals.add(name, patchEntry.deepCopy().apply {
                     addProperty("num_training_crops", patchCrops)
                     remove("num_crops")
+                    // V6: ensure exemplars exist for max-over-exemplars scoring.
+                    // New exportPatch() includes them; older patches may not — wrap centroid.
+                    if (!has("exemplars")) {
+                        add("exemplars", JsonArray().also { outer ->
+                            outer.add(JsonArray().also { inner ->
+                                for (i in 0 until patchEmbArr.size()) inner.add(patchEmbArr[i])
+                            })
+                        })
+                        addProperty("num_exemplars", 1)
+                    }
                 })
                 newCount++
             } else {
