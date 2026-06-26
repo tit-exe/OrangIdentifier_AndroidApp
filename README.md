@@ -17,8 +17,8 @@
 
 | | |
 |---|---|
-| **Latest APK** | [Download app-release.apk](https://github.com/tit-exe/OrangIdentifier_AndroidApp/releases/latest/download/app-release.apk) |
-| **All releases** | [GitHub Releases](https://github.com/tit-exe/OrangIdentifier_AndroidApp/releases) |
+| **Latest APK (V4)** | [Download orangsappv4.apk](https://github.com/tit-exe/OrangIdentifier_AndroidApp/releases/download/v4/orangsappv4.apk) |
+| **All releases** | [GitHub Releases](https://github.com/tit-exe/OrangIdentifier_AndroidApp/releases/tag/v4) |
 
 > Minimum: Android 8.0 (API 26). No internet connection required.
 
