@@ -55,7 +55,7 @@
 flowchart LR
     A[Camera / Photo] --> B["YOLO v2 TFLite\n(22 MB)\nFace detection"]
     B --> C["Crop & resize\n224 × 224 px"]
-    C --> D["MegaDescriptor-T TFLite\n(112 MB · Git LFS)\nSwin Transformer\n→ 768-dim embedding"]
+    C --> D["MegaDescriptor-T TFLite\n(112 MB)\nSwin Transformer\n→ 768-dim embedding"]
     D --> E["L2-normalize\n+ megadescriptor\nnormalization"]
     E --> F{"Max cosine similarity\nvs 25 exemplars\nper individual"}
     F -->|"score ≥ 0.5371"| G["✓ Known individual\n+ confidence %"]
@@ -194,7 +194,7 @@ The app discovers backbone models dynamically and **the exact filename does not 
 
 | File | Size | Description | Storage |
 |------|------|-------------|---------|
-| `megadesc_v6_backbone.tflite` | 112 MB | MegaDescriptor-T-224 (Swin Transformer), 768-dim embeddings | Git LFS |
+| `megadesc_v6_backbone.tflite` | 112 MB | MegaDescriptor-T-224 (Swin Transformer), 768-dim embeddings | Git |
 | `yolo_v2_detector.tflite` | 22 MB | YOLO v2 face detector | Git |
 | `gallery.json` | 6.3 MB | 15 individuals × 25 exemplars × 768 dims | Git |
 
@@ -225,19 +225,16 @@ Both `.tflite` files are bundled in `app/src/main/assets/` and included in the A
 
 ### Prerequisites
 - Android Studio Hedgehog or later
-- Git with Git LFS installed
+- Git
 
 ### Steps
 
 ```bash
-# 1. Clone (Git LFS required for the 112 MB backbone)
+# 1. Clone
 git clone https://github.com/tit-exe/OrangIdentifier_AndroidApp.git
 cd OrangIdentifier_AndroidApp
 
-# 2. Pull LFS objects (backbone TFLite)
-git lfs pull
-
-# 3. Open in Android Studio, sync Gradle, then Build and Run
+# 2. Open in Android Studio, sync Gradle, then Build and Run
 ```
 
 The `gallery.json`, `yolo_v2_detector.tflite`, and `megadesc_v6_backbone.tflite` are all included in the repository and will be bundled into the APK automatically.
@@ -252,7 +249,7 @@ The `gallery.json`, `yolo_v2_detector.tflite`, and `megadesc_v6_backbone.tflite`
 app/src/main/
 ├── assets/
 │   ├── gallery.json                    # V6 identity gallery (15 individuals)
-│   ├── megadesc_v6_backbone.tflite     # Swin Transformer backbone (112 MB, Git LFS)
+│   ├── megadesc_v6_backbone.tflite     # Swin Transformer backbone (112 MB)
 │   └── yolo_v2_detector.tflite         # YOLO face detector (22 MB)
 ├── java/com/iphc/orangidentifier/
 │   ├── data/
