@@ -1,4 +1,4 @@
-# OrangIdentifier — Android App (V6)
+# OrangIdentifier: Android App (V6)
 
 <img align="right" width="120" src="github_assets/app_icon.png" alt="OrangIdentifier App Icon">
 
@@ -7,10 +7,9 @@
 [![TFLite](https://img.shields.io/badge/ML-TensorFlow%20Lite-ff6f00?logo=tensorflow&logoColor=white)](https://www.tensorflow.org/lite)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**Individual facial recognition for Bornean orangutans — fully offline, runs on any Android phone.**
+**Individual facial recognition for Bornean orangutans. Fully offline, runs on any Android phone.**
 
-> Field companion to the [OrangIdentifier ML Pipeline](https://github.com/tit-exe/OrangIdentifier).  
-> Deployed by IPHC rangers at rehabilitation and release sites.
+> Field companion to the [OrangIdentifier ML Pipeline](https://github.com/tit-exe/OrangIdentifier).
 
 ---
 
@@ -18,7 +17,7 @@
 
 | | |
 |---|---|
-| **Latest APK** | [⬇ Download app-release.apk](https://github.com/tit-exe/OrangIdentifier_AndroidApp/releases/latest/download/app-release.apk) |
+| **Latest APK** | [Download app-release.apk](https://github.com/tit-exe/OrangIdentifier_AndroidApp/releases/latest/download/app-release.apk) |
 | **All releases** | [GitHub Releases](https://github.com/tit-exe/OrangIdentifier_AndroidApp/releases) |
 
 > Minimum: Android 8.0 (API 26). No internet connection required.
@@ -35,18 +34,18 @@
 
 ## Features
 
-- **Fully offline** — all inference runs on-device via TensorFlow Lite, zero internet required
-- **YOLO v2 face detector** — detects one or multiple orangutan faces per photo
-- **V6 MegaDescriptor backbone** — 768-dim embeddings from a Swin Transformer (MegaDescriptor-T-224)
-- **Max-over-exemplars scoring** — each identity matched against 25 representative vectors for maximum recall
-- **Add new individuals** — take 5–20+ photos, the app computes and saves the embedding prototype on-device
-- **Add field photos** — reinforce an existing individual's profile with additional field photos (quality-gated)
-- **Gallery export / import** — share the full `gallery.json` with colleagues or backup to another device
-- **Per-individual patch sharing** — export a single individual as a JSON patch for targeted updates
-- **Gallery versioning** — automatic backups before every change, up to 20 restore points
-- **Model hot-swap** — import a new backbone or detector via Settings without reinstalling the app
-- **Batch processing** — analyze multiple photos in sequence
-- **Scan history** — all identifications logged to a local Room database
+- **Fully offline**: all inference runs on-device via TensorFlow Lite, no internet required
+- **YOLO v2 face detector**: detects one or multiple orangutan faces per photo
+- **V6 MegaDescriptor backbone**: 768-dim embeddings from a Swin Transformer (MegaDescriptor-T-224)
+- **Max-over-exemplars scoring**: each identity matched against 25 representative vectors for maximum recall
+- **Add new individuals**: take 5 to 20+ photos and the app computes and saves the embedding prototype on-device
+- **Add field photos**: reinforce an existing individual's profile with additional field photos (quality-gated)
+- **Gallery export / import**: share the full `gallery.json` with colleagues or back it up to another device
+- **Per-individual patch sharing**: export a single individual as a JSON patch for targeted updates
+- **Gallery versioning**: automatic backups before every change, up to 20 restore points
+- **Model hot-swap**: import a new backbone or detector via Settings without reinstalling the app
+- **Batch processing**: analyze multiple photos in sequence
+- **Scan history**: all identifications logged to a local Room database
 
 ---
 
@@ -99,14 +98,14 @@ The bundled `gallery.json` (6.3 MB) contains the identity prototypes for all kno
   "num_individuals": 15,
   "individuals": {
     "Molly": {
-      "embedding": [/* 768 floats — L2-normalized centroid */],
+      "embedding": [/* 768 floats, L2-normalized centroid */],
       "exemplars": [
         [/* 768 floats */],  // exemplar 1
         [/* 768 floats */],  // exemplar 2
-        // … 25 exemplars total per individual
+        // ... 25 exemplars total per individual
       ],
       "num_exemplars": 25,
-      "field_embedding": [/* 768 floats — optional, added by rangers in-app */],
+      "field_embedding": [/* 768 floats, optional, added in-app */],
       "field_crops": 12
     }
   }
@@ -123,7 +122,7 @@ The bundled `gallery.json` (6.3 MB) contains the identity prototypes for all kno
 | 3 | Jula | 8 | PULCO | 13 | Ujian |
 | 4 | Kembali | 9 | PUTRI | 14 | Yori |
 
-### Scoring — Max-over-Exemplars
+### Scoring: Max-over-Exemplars
 
 Unlike a single centroid, each individual stores **25 exemplar vectors** chosen by proximity to the centroid during V6 training. At inference:
 
@@ -135,21 +134,21 @@ This captures the natural variability in facial appearance (different angles, li
 
 ### Backward Compatibility
 
-User-added individuals (created in-app) store `exemplars: [[centroid]]` — a single-element list. The `max()` over one vector is equivalent to a plain dot product, so V3-style galleries work transparently.
+User-added individuals (created in-app) store `exemplars: [[centroid]]`, a single-element list. The `max()` over one vector is equivalent to a plain dot product, so V3-style galleries work transparently.
 
 ---
 
 ## Adding a New Individual
 
-1. Go to **Settings → Add individual** (or use the + button on the home screen)
+1. Go to **Settings** and tap **Add individual** (or use the + button on the home screen)
 2. Enter the individual's name
-3. Take or import **at least 5 photos** (10–20 recommended for robustness)
-4. Review the detected face crops — delete bad crops (wrong angle, motion blur, partial face)
-5. Tap **Confirm** — the app computes a 768-dim prototype and writes it to `gallery.json`
+3. Take or import **at least 5 photos** (10 to 20 recommended for robustness)
+4. Review the detected face crops and delete any bad ones (wrong angle, motion blur, partial face)
+5. Tap **Confirm** and the app computes a 768-dim prototype and writes it to `gallery.json`
 
 Quality gates are enforced at every save:
-- **Self-similarity check**: the merged prototype must score ≥ threshold against the individual's own exemplars (prevents overly generic profiles)
-- **Anti-false-positive check**: the merged prototype must score < threshold against all exemplars of all other individuals (prevents one individual from being recognised as another)
+- **Self-similarity check**: the merged prototype must score above threshold against the individual's own exemplars, which prevents overly generic profiles
+- **Anti-false-positive check**: the merged prototype must score below threshold against all exemplars of all other individuals, which prevents cross-identity confusion
 
 ### Adding Field Photos to an Existing Individual
 
@@ -164,23 +163,27 @@ score = max( max_over_exemplars, dot(query, field_embedding) )
 ## Gallery Sharing & Versioning
 
 ### Full Gallery Export
-Gallery screen → **⬆ Export gallery** — shares the complete `gallery.json`.  
+
+Gallery screen → **Export gallery** shares the complete `gallery.json`.
 The recipient imports it via **Settings → Import Labels**.
 
 ### Per-Individual Patch
-After adding an individual → **Share with colleagues** — exports a lightweight JSON patch containing only that individual's embedding.  
-Recipients import it via **Settings → Import patch** — it merges without touching other individuals.
+
+After adding an individual, tap **Share with colleagues** to export a lightweight JSON patch containing only that individual's embedding.
+Recipients import it via **Settings → Import patch** and it merges without touching other individuals.
 
 ### Automatic Backups & Restore
-Every gallery write creates an automatic backup (up to 20 rolling backups).  
-- **Quick undo**: Gallery screen → **↩ Undo last change**
-- **Full history**: Settings → **Gallery backup → Restore** — shows a timestamped list with a diff of what changed
+
+Every gallery write creates an automatic backup (up to 20 rolling backups).
+
+- **Quick undo**: Gallery screen → **Undo last change**
+- **Full history**: Settings → **Gallery backup → Restore** shows a timestamped list with a diff of what changed
 
 ---
 
 ## Model Hot-Swap
 
-The app discovers backbone models dynamically — **the exact filename does not matter**. Any `.tflite` file whose name contains `backbone`, `megadesc`, `arcface`, `classifier`, or `resnet` (and does not contain `yolo` or `detector`) is treated as the backbone. This means:
+The app discovers backbone models dynamically and **the exact filename does not matter**. Any `.tflite` file whose name contains `backbone`, `megadesc`, `arcface`, `classifier`, or `resnet` (and does not contain `yolo` or `detector`) is treated as the backbone. This means:
 
 - Renaming to `megadesc_v7_backbone.tflite` works automatically
 - Importing a new backbone via **Settings → Import Bundle** (`.zip`) replaces the model without reinstalling the app
@@ -191,13 +194,13 @@ The app discovers backbone models dynamically — **the exact filename does not 
 
 | File | Size | Description | Storage |
 |------|------|-------------|---------|
-| `megadesc_v6_backbone.tflite` | 112 MB | MegaDescriptor-T-224 (Swin Transformer) — 768-dim embeddings | Git LFS |
+| `megadesc_v6_backbone.tflite` | 112 MB | MegaDescriptor-T-224 (Swin Transformer), 768-dim embeddings | Git LFS |
 | `yolo_v2_detector.tflite` | 22 MB | YOLO v2 face detector | Git |
 | `gallery.json` | 6.3 MB | 15 individuals × 25 exemplars × 768 dims | Git |
 
 Both `.tflite` files are bundled in `app/src/main/assets/` and included in the APK.
 
-> **NNAPI note:** The Swin Transformer backbone uses 6D tensors in its FullyConnected operations, which exceed NNAPI's 4D tensor limit. The app correctly falls back to CPU + XNNPACK — this is expected behaviour, not an error.
+> **NNAPI note:** The Swin Transformer backbone uses 6D tensors in its FullyConnected operations, which exceed NNAPI's 4D tensor limit. The app correctly falls back to CPU + XNNPACK. This is expected behaviour, not an error.
 
 ---
 
@@ -234,12 +237,12 @@ cd OrangIdentifier_AndroidApp
 # 2. Pull LFS objects (backbone TFLite)
 git lfs pull
 
-# 3. Open in Android Studio, sync Gradle, then Build → Run
+# 3. Open in Android Studio, sync Gradle, then Build and Run
 ```
 
 The `gallery.json`, `yolo_v2_detector.tflite`, and `megadesc_v6_backbone.tflite` are all included in the repository and will be bundled into the APK automatically.
 
-> If you want to use a **different backbone**, place any `.tflite` file whose name contains `backbone`, `megadesc`, `arcface`, `classifier`, or `resnet` into `app/src/main/assets/`. The app will pick it up automatically.
+> If you want to use a different backbone, place any `.tflite` file whose name contains `backbone`, `megadesc`, `arcface`, `classifier`, or `resnet` into `app/src/main/assets/`. The app will pick it up automatically.
 
 ---
 
@@ -260,14 +263,14 @@ app/src/main/
 │   ├── domain/                         # Use cases, repository interfaces
 │   ├── ml/
 │   │   ├── EmbeddingUtils.kt           # L2-normalize, dot product, averageEmbeddings
-│   │   ├── TfliteInterpreterFactory.kt # NNAPI → GPU → CPU+XNNPACK fallback chain
+│   │   ├── TfliteInterpreterFactory.kt # NNAPI to GPU to CPU+XNNPACK fallback chain
 │   │   └── YoloDetector.kt             # YOLO post-processing
 │   └── ui/
-│       ├── add_individual/             # Photo capture + crop review + prototype save
+│       ├── add_individual/             # Photo capture, crop review, prototype save
 │       ├── gallery/                    # Gallery list, export, undo, field photo add
-│       ├── home/                       # Camera + photo picker entry point
+│       ├── home/                       # Camera and photo picker entry point
 │       ├── scan_result/                # Per-face result cards, batch navigation
-│       └── settings/                   # ModelSettingsFragment — threshold, import, backup
+│       └── settings/                   # Threshold, model import, gallery backup
 └── res/
     ├── layout/                         # All fragment layouts
     ├── navigation/                     # nav_graph.xml
@@ -278,5 +281,5 @@ app/src/main/
 
 ## Related
 
-- **ML Pipeline & Training** — [OrangIdentifier](https://github.com/tit-exe/OrangIdentifier) — V6 training scripts, TFLite export, gallery generation
-- **Models on HuggingFace** — [tit0000/OrangIdentifier](https://huggingface.co/tit0000/OrangIdentifier)
+- [OrangIdentifier](https://github.com/tit-exe/OrangIdentifier): ML pipeline, V6 training scripts, TFLite export, gallery generation
+- [tit0000/OrangIdentifier on HuggingFace](https://huggingface.co/tit0000/OrangIdentifier): hosted models
